@@ -1,10 +1,17 @@
 /* AMS Breathing — app logic (vanilla JS, no build) */
 'use strict';
 
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.3.1';
 
 /* ---------- Version history (newest first) ---------- */
 const CHANGELOG = [
+  {
+    version: '1.3.1',
+    date: '2026-08-12 20:00',
+    changes: [
+      'Fixed a bug where a freshly published update could stay hidden behind an old cached copy of the app even after fully quitting and reopening — the update-check itself is now tied to the version number, so it always fetches fresh.',
+    ],
+  },
   {
     version: '1.3.0',
     date: '2026-07-27 17:58',
@@ -1004,7 +1011,7 @@ function init() {
   $('#app-version').textContent = 'AMS Breathing · v' + APP_VERSION;
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js').catch(() => {});
+    navigator.serviceWorker.register('service-worker.js?v=' + APP_VERSION).catch(() => {});
   }
 }
 
