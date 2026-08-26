@@ -1,10 +1,22 @@
 /* AMS Breathing — app logic (vanilla JS, no build) */
 'use strict';
 
-const APP_VERSION = '1.3.1';
+const APP_VERSION = '1.4.0';
 
 /* ---------- Version history (newest first) ---------- */
 const CHANGELOG = [
+  {
+    version: '1.4.0',
+    date: '2026-08-26 21:30',
+    changes: [
+      'Built for practising without your glasses on. During a session the screen is now stripped back to three things: the ball, one big instruction word, and a clock roughly twice the size it was. The "Breath 3 of 30" line, the on-screen affirmations and the "double-tap when you need to breathe" wording are gone — the guidance voice still says all of it, so there is simply less small print to squint at.',
+      'Instructions became symbols and short words: ▲ IN, ▼ OUT, HOLD, ▲ IN · HOLD, RELAX — all in large capitals. The double-tap reminder during a breath-hold is now just 👆👆.',
+      '"Cycle 1 / 3" was replaced by a row of dots at the top of the screen: filled for cycles done, glowing for the one you are in.',
+      'During a breath-hold the whole screen now takes on the colour of the ball as it drifts blue → yellow → orange → red, and the clock is tinted to match — so how long you have been holding reads as colour, with no need to focus on the digits.',
+      'The screen after a session was cut right down: one 🎉, your best hold as one huge number, that round’s holds as bare numbers, and one big DONE button. Cycles done, breath count and all the labels moved to Statistics.',
+      'The ball is very slightly smaller during a session, to make room for the much bigger clock, and the home-screen options (breaths, tempo, cycles) are larger and easier to hit.',
+    ],
+  },
   {
     version: '1.3.1',
     date: '2026-08-12 20:00',
@@ -234,6 +246,37 @@ function setBallColor(inner, outer) {
 }
 function resetBallColor() { setBallColor(COL_BLUE[0], COL_BLUE[1]); }
 
+/* The breath-hold colour also tints the clock and washes the whole screen, so
+   how long you've been holding reads without focusing on any digits. */
+function setHoldTint(col) {
+  const r = document.documentElement.style;
+  if (col) {
+    r.setProperty('--hold-col', col);
+    // the ball's halo follows the ball, instead of staying blue around a red ball
+    const [rr, gg, bb] = hexToRgb(col);
+    r.setProperty('--orb-glow', 'rgba(' + rr + ',' + gg + ',' + bb + ',.5)');
+  } else {
+    r.removeProperty('--hold-col');
+    r.removeProperty('--orb-glow');
+  }
+}
+function clearHoldTint() {
+  setHoldTint(null);
+  const v = $('#view-session');
+  if (v) v.classList.remove('holding');
+}
+
+/* Cycle progress as dots rather than "Cycle 1 / 3". */
+function renderCycleDots(current, total) {
+  const el = $('#cycle-dots');
+  if (!el) return;
+  let h = '';
+  for (let i = 1; i <= total; i++) {
+    h += '<i class="' + (i < current ? 'done' : i === current ? 'now' : '') + '"></i>';
+  }
+  el.innerHTML = h;
+}
+
 /* Home-screen preview ball reflects the selected breathing tempo. */
 function updateMiniOrbPace() {
   const m = document.querySelector('.orb-mini');
@@ -351,20 +394,21 @@ async function runBreathing(count) {
   $('#tap-hint').textContent = '';
   cueAffirm().textContent = '';
   resetBallColor();
+  clearHoldTint();
   setPhaseClass('breathing');
   for (let i = 1; i <= count && !stopFlag; i++) {
     if (i === 1) sessionProgressed = true;
     const last = (i === count);
     $('#orb-count').textContent = i;
     // Inhale
-    setCue(last ? 'Last breath in' : 'Breathe in', last ? 'Final breath — then hold' : ('Breath ' + i + ' of ' + count));
+    setCue(last ? '▲ Last in' : '▲ In', last ? 'Final breath — then hold' : ('Breath ' + i + ' of ' + count));
     o.style.transitionDuration = t.inhale + 's';
     o.classList.remove('exhale'); o.classList.add('inhale');
     speak(last ? 'Last breath. Breathe in.' : 'Breathe in');
     await interruptibleSleep(t.inhale * 1000);
     if (stopFlag) return;
     // Exhale
-    setCue('Breathe out', last ? 'Final breath — then hold' : ('Breath ' + i + ' of ' + count));
+    setCue('▼ Out', last ? 'Final breath — then hold' : ('Breath ' + i + ' of ' + count));
     o.style.transitionDuration = t.exhale + 's';
     o.classList.remove('inhale'); o.classList.add('exhale');
     speak('Breathe out');
@@ -377,11 +421,12 @@ async function runBreathing(count) {
 async function runExhaleHold() {
   setPhaseClass('hold-empty');
   orb().style.transitionDuration = '1.4s';
-  setCue('Fully breathe out', 'Hold your breath — empty lungs');
+  setCue('Hold', 'Hold your breath — empty lungs');
   speak('Fully breathe out. Hold your breath.');
   const timerEl = $('#session-timer');
   timerEl.hidden = false; timerEl.textContent = '0:00';
-  $('#tap-hint').textContent = 'Double-tap when you need to breathe';
+  $('#tap-hint').textContent = '👆👆';         // symbol, not "double-tap when you…"
+  $('#view-session').classList.add('holding');
 
   const start = performance.now();
   holdStartTs = start; inExhaleHold = true;
@@ -396,9 +441,11 @@ async function runExhaleHold() {
       const elapsed = (performance.now() - start) / 1000;
       timerEl.textContent = fmtClock(elapsed);
 
-      // Ball colour shift (blue -> orange @2m -> red @3m)
+      // Ball colour shift (blue -> orange @2m -> red @3m) — the clock and the
+      // whole screen follow it, so the length of the hold reads as colour alone
       const [ci, co] = ballColorsFor(elapsed);
       setBallColor(ci, co);
+      setHoldTint(ci);
 
       // Spoken time cues (denser after 2 minutes)
       if (elapsed >= nextTimeCue) {
@@ -425,17 +472,20 @@ async function runExhaleHold() {
   const held = (performance.now() - start) / 1000;
   timerEl.textContent = fmtClock(held);
   cueAffirm().textContent = '';
+  $('#tap-hint').textContent = '';
+  $('#view-session').classList.remove('holding');
   return held;
 }
 
 /* Recovery hold (full lungs) — 15 seconds with cues. */
 async function runInhaleHold() {
   resetBallColor();
+  clearHoldTint();
   setPhaseClass('hold-full');
   orb().style.transitionDuration = '1.5s';
   $('#session-timer').hidden = false;
   $('#tap-hint').textContent = '';
-  setCue('Take a large breath in', 'Hold for ' + RECOVERY_SECONDS + ' seconds');
+  setCue('▲ In · hold', 'Hold for ' + RECOVERY_SECONDS + ' seconds');
   speak('Take a large breath in and hold your breath for ' + RECOVERY_SECONDS + ' seconds.');
 
   const marks = [
@@ -453,7 +503,7 @@ async function runInhaleHold() {
       while (mi < marks.length && elapsed >= marks[mi].at) {
         const m = marks[mi];
         speak(m.say);
-        if (m.at === RECOVERY_SECONDS) setCue('Breathe out', 'Recovery complete'); else cueSub().textContent = m.text;
+        if (m.at === RECOVERY_SECONDS) setCue('▼ Out', 'Recovery complete'); else cueSub().textContent = m.text;
         mi++;
       }
       if (elapsed >= RECOVERY_SECONDS || stopFlag) { clearInterval(id); resolve(); }
@@ -463,6 +513,7 @@ async function runInhaleHold() {
 
 /* Short relax pause between cycles. */
 async function runSettle() {
+  clearHoldTint();
   setPhaseClass('settle');
   orb().style.transitionDuration = '2s';
   setCue('Relax', 'Settle before the next cycle');
@@ -490,12 +541,14 @@ async function runSession() {
     const totalCycles = settings.cycles;
 
     resetBallColor();
+    clearHoldTint();
+    renderCycleDots(0, totalCycles);
     setPhaseClass('settle');
-    setCue('Get ready…', settings.breaths + ' breaths · ' + TEMPO[settings.tempo].label.toLowerCase() + ' tempo');
+    setCue('Ready', settings.breaths + ' breaths · ' + TEMPO[settings.tempo].label.toLowerCase() + ' tempo');
     await interruptibleSleep(2500);
 
     for (let c = 1; c <= totalCycles && !stopFlag; c++) {
-      $('#session-cycle-label').textContent = 'Cycle ' + c + ' / ' + totalCycles;
+      renderCycleDots(c, totalCycles);
       await runBreathing(settings.breaths);
       if (stopFlag) break;
       const held = await runExhaleHold();
@@ -530,6 +583,7 @@ async function runSession() {
 }
 
 function quitSession() {
+  clearHoldTint();
   if (!running) { show('home'); return; }
   stopFlag = true;
   cancelSpeech();
@@ -558,19 +612,15 @@ function quitSession() {
 }
 
 /* ---------- Summary ---------- */
+/* Read seconds after a session with no glasses on: your best hold as one huge
+   number, the round's holds as bare numbers, one button. Cycles done, breath
+   count and every label are in Statistics, for when the glasses are back on. */
 function renderSummary(rec) {
   const best = rec.holds.length ? Math.max(...rec.holds) : 0;
-  const chips = rec.holds.map((h, i) =>
-    `<div class="hold-chip"><span class="hc-lbl">Cycle ${i + 1}</span><span class="hc-val">${fmtDuration(h)}</span></div>`
-  ).join('') || '<p class="empty" style="padding:12px">No completed breath-holds.</p>';
-  $('#summary-body').innerHTML = `
-    <div class="stats-summary">
-      <div class="stat-card"><div class="num">${rec.holds.length}</div><div class="lbl">Cycles done</div></div>
-      <div class="stat-card"><div class="num">${fmtDuration(best)}</div><div class="lbl">Best hold</div></div>
-      <div class="stat-card"><div class="num">${rec.breaths}</div><div class="lbl">Breaths</div></div>
-    </div>
-    <p class="setting-label" style="margin-top:20px">Exhale breath-holds</p>
-    <div class="holds">${chips}</div>`;
+  $('#sum-best').textContent = fmtClock(best);
+  $('#sum-holds').textContent = rec.holds.length
+    ? rec.holds.map((h) => fmtClock(h)).join('   ·   ')
+    : '—';
 }
 
 /* ---------- Statistics ---------- */
@@ -899,10 +949,21 @@ const HOW_HTML = `
   <h3>One cycle</h3>
   <ul>
     <li><strong>Breathe</strong> — take your chosen number of full breaths (25 / 30 / 35), following the ball: expand = breathe in, shrink = breathe out. The final breath is announced.</li>
-    <li><strong>Exhale hold</strong> — after the last breath, breathe all the way out and hold with empty lungs. A stopwatch counts up and calls out the time (every 30s, then every 15s past 2 minutes), with encouraging words. The ball drifts from blue → yellow (1 min) → orange (2 min) → red (3 min). <strong>Double-tap the screen</strong> when you need to breathe again; your time is saved.</li>
+    <li><strong>Exhale hold</strong> — after the last breath, breathe all the way out and hold with empty lungs. A stopwatch counts up and calls out the time (every 30s, then every 15s past 2 minutes), with spoken encouragement along the way. The ball — and now the clock and the whole screen with it — drifts from blue → yellow (1 min) → orange (2 min) → red (3 min). <strong>Double-tap the screen</strong> when you need to breathe again; your time is saved.</li>
     <li><strong>Recovery hold</strong> — take one big breath in and hold for 15 seconds. The app cues 5s, 10s and "breathe out" at 15s, then a short relax pause before the next cycle.</li>
   </ul>
   <p>The whole cycle repeats 3 or 4 times, then the session is saved automatically.</p>
+  <h3>Reading it with no glasses</h3>
+  <p>A session is something you do with your eyes shut or your glasses off, so the screen strips itself back to what still reads blurred. Everything removed is <strong>still spoken aloud</strong> — there is just less small print.</p>
+  <ul>
+    <li><strong>One instruction word</strong>, large and in capitals, with an arrow for direction: <strong>▲ IN</strong>, <strong>▼ OUT</strong>, <strong>HOLD</strong>, <strong>▲ IN · HOLD</strong>, <strong>RELAX</strong>.</li>
+    <li><strong>The ball</strong> — expanding means breathe in, shrinking means breathe out, and the number inside it is the breath you're on.</li>
+    <li><strong>The clock</strong>, about twice its old size, and tinted the same colour as the ball.</li>
+    <li><strong>Colour</strong> — during a breath-hold the ball, the clock and the whole screen drift together from blue → yellow (1 min) → orange (2 min) → red (3 min). How long you've been holding reads as colour, without focusing on any digits.</li>
+    <li><strong>Dots</strong> at the top instead of "Cycle 1 / 3": filled for cycles done, glowing for the one you're in.</li>
+    <li><strong>👆👆</strong> instead of "double-tap when you need to breathe".</li>
+  </ul>
+  <p>The screen after a session is cut down the same way: one 🎉, your <strong>best hold</strong> as one huge number, that round's holds as bare numbers, and one big <strong>DONE</strong> button. Cycles done, breath count and every label live in <strong>Statistics</strong>, for when your glasses are back on.</p>
   <h3>Starting &amp; stopping</h3>
   <p>Double-tap anywhere on the home screen to begin. During an exhale hold, double-tap to end the hold. Use ✕ to quit early — an interrupted session is still saved to your statistics (marked as interrupted).</p>
   <h3>Definitions</h3>

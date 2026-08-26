@@ -106,10 +106,29 @@ body { -webkit-user-select: none; user-select: none; }
   cursor: pointer; position: relative; min-height: 100%;
 }
 .session-top { width: 100%; display: flex; justify-content: space-between; align-items: center; color: var(--text-dim); font-weight: 600; }
+/* cycle progress as dots — shape and colour, nothing to read */
+.cycle-dots { display: flex; gap: 10px; align-items: center; }
+.cycle-dots i { width: 18px; height: 18px; border-radius: 50%; display: block;
+  background: var(--seg-bg); border: 2px solid var(--border); transition: background .3s, border-color .3s; }
+.cycle-dots i.done { background: var(--accent); border-color: var(--accent); }
+.cycle-dots i.now { background: var(--accent-2); border-color: var(--accent-2);
+  box-shadow: 0 0 0 5px rgba(74,163,223,.26); }
+#view-session .icon-btn.ghost { font-size: 2rem; padding: 6px 14px; }
+
+/* the whole screen picks up the breath-hold colour, blue → yellow → orange → red */
+#view-session::before {
+  content: ""; position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background: radial-gradient(125% 72% at 50% 34%, var(--hold-col, transparent), transparent 70%);
+  opacity: 0; transition: opacity 1.2s ease, background .8s linear;
+}
+#view-session.holding::before { opacity: .26; }
+.session-stage { position: relative; z-index: 1; }
+
 .orb-wrap { flex: 1; display: flex; align-items: center; justify-content: center; width: 100%; min-height: 0; }
 .orb {
   --ball-1: #5bb0e6; --ball-2: #2b7bc4;
-  width: min(92vw, 58vh, 480px); aspect-ratio: 1;
+  /* a touch smaller than before, to buy room for a much bigger clock */
+  width: min(88vw, 50vh, 460px); aspect-ratio: 1;
   border-radius: 47% 53% 52% 48% / 50% 47% 53% 50%;
   background: radial-gradient(circle at 38% 32%, var(--ball-1), var(--ball-2));
   box-shadow: 0 0 90px var(--orb-glow), inset 0 -18px 56px rgba(0,0,0,.16);
@@ -135,12 +154,49 @@ body { -webkit-user-select: none; user-select: none; }
 @keyframes pulse { 0%,100% { filter: brightness(1);} 50% { filter: brightness(1.16);} }
 .orb-count { font-size: clamp(4rem, 22vw, 7rem); font-weight: 800; color: #fff; text-shadow: 0 2px 12px rgba(0,0,0,.4); line-height: 1; }
 
-.session-cue { text-align: center; }
-.cue-main { font-size: 2rem; font-weight: 700; letter-spacing: -.01em; min-height: 1.2em; }
-.cue-sub { font-size: 1.02rem; color: var(--text-dim); margin-top: 6px; min-height: 1.3em; }
-.session-timer { font-size: 3.2rem; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 6px; color: var(--accent); }
-.cue-affirm { font-size: 1.05rem; font-style: italic; color: var(--accent-2); margin-top: 10px; min-height: 1.4em; padding: 0 6px; }
-.tap-hint { min-height: 1.4em; margin-top: 12px; color: var(--text-dim); font-size: .95rem; text-align: center; }
+/* ===== In-session: no glasses, eyes half shut =====
+   Only three things survive on this screen — the ball, one instruction word and
+   the clock. The "Breath 3 of 30" line, the affirmations and the tap wording
+   were all text that can't be read at the moment it would be needed; they are
+   still spoken aloud, they just aren't more small print to squint at. */
+.session-cue { text-align: center; width: 100%; }
+.cue-main {
+  font-size: clamp(2.2rem, 14vw, 3.6rem); font-weight: 800; letter-spacing: .01em;
+  line-height: 1.05; min-height: 1.1em; text-transform: uppercase;
+}
+.cue-sub { display: none; }        /* the ball and the clock already say it */
+.cue-affirm { display: none; }     /* still spoken — just not more text */
+.session-timer {
+  font-size: clamp(3.2rem, 23vw, 6.5rem); font-weight: 800; line-height: 1;
+  font-variant-numeric: tabular-nums; margin-top: 8px;
+  color: var(--hold-col, var(--accent)); transition: color .8s linear;
+}
+/* keep the clock's space reserved when it's hidden, so the ball doesn't
+   jump up and down as the session moves between phases */
+.session-timer[hidden] { display: block; visibility: hidden; }
+.tap-hint { min-height: 1.2em; margin-top: 10px; font-size: 1.9rem; line-height: 1; text-align: center; }
+
+/* ---------- Summary (glasses still off) ---------- */
+.summary-main {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px; text-align: center;
+  padding: calc(var(--safe-top) + 20px) 20px calc(var(--safe-bot) + 24px);
+}
+.sum-mark { font-size: clamp(3.6rem, 19vw, 5.5rem); line-height: 1; }
+.sum-best { font-size: clamp(4rem, 26vw, 7.5rem); font-weight: 900; line-height: 1;
+  font-variant-numeric: tabular-nums; color: var(--accent); }
+.sum-holds { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+  font-size: clamp(1.4rem, 7vw, 2.1rem); font-weight: 800;
+  font-variant-numeric: tabular-nums; color: var(--text-dim); }
+.btn.sum-done { width: 100%; max-width: 420px; height: 88px; font-size: 1.9rem;
+  border-radius: 22px; letter-spacing: .08em; }
+.linkish { background: none; border: none; color: var(--accent);
+  font-size: 1.25rem; font-weight: 700; padding: 10px; cursor: pointer; }
+
+/* ---------- Home screen: bigger to set up without glasses ---------- */
+.home-main .setting-label { font-size: 1rem; }
+.home-main .seg button { font-size: 1.35rem; padding: 16px 6px; }
+.home-main .start-hint p { font-size: 1.3rem; }
 
 /* ---------- Stats ---------- */
 .stats-summary { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin: 8px 0 20px; }

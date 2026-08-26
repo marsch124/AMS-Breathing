@@ -4,7 +4,7 @@
 // have a connection the app always loads the newest version from the server and
 // quietly refreshes its offline copy; when you're offline it falls back to that
 // saved copy. So new deploys appear on the next launch, automatically.
-const CACHE = 'wim-hof-breathing-v1.3.1';
+const CACHE = 'wim-hof-breathing-v1.4.0';
 const ASSETS = [
   './',
   './index.html',

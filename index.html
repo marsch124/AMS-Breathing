@@ -92,7 +92,8 @@
   <section id="view-session" class="view">
     <div id="session-stage" class="session-stage">
       <div class="session-top">
-        <span id="session-cycle-label">Cycle 1 / 3</span>
+        <!-- cycle progress as dots, not "Cycle 1 / 3" — readable with no glasses -->
+        <div id="cycle-dots" class="cycle-dots" aria-label="Cycle progress"></div>
         <button class="icon-btn ghost" id="btn-quit" aria-label="Quit session" title="Quit">✕</button>
       </div>
 
@@ -114,16 +115,16 @@
   </section>
 
   <!-- ============ SUMMARY ============ -->
+  <!-- Read straight after a session, glasses still off: one mark, your best
+       hold as one huge number, the round's holds as bare numbers, one button.
+       Cycle counts, breath counts and labels live in Statistics. -->
   <section id="view-summary" class="view">
-    <header class="topbar">
-      <h1>Session complete 🎉</h1>
-    </header>
-    <main class="pad">
-      <div id="summary-body"></div>
-      <div class="btn-row">
-        <button class="btn primary" data-goto="home">Done</button>
-        <button class="btn" data-goto="stats">View statistics</button>
-      </div>
+    <main class="summary-main">
+      <div class="sum-mark">🎉</div>
+      <div id="sum-best" class="sum-best">0:00</div>
+      <div id="sum-holds" class="sum-holds"></div>
+      <button class="btn primary sum-done" data-goto="home">DONE</button>
+      <button class="linkish" data-goto="stats">statistics →</button>
     </main>
   </section>
 
