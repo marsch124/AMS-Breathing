@@ -4,7 +4,11 @@
 // have a connection the app always loads the newest version from the server and
 // quietly refreshes its offline copy; when you're offline it falls back to that
 // saved copy. So new deploys appear on the next launch, automatically.
-const CACHE = 'wim-hof-breathing-v1.4.0';
+/* Named after the app version the page registered with, and we only ever bin
+   our OWN older copies — the sibling AMS apps share this web address. */
+const APP_V = (new URL(self.location.href).searchParams.get('v') || 'dev').replace(/^v/, '');
+const PREFIX = 'wim-hof-breathing-v';
+const CACHE = PREFIX + APP_V;
 const ASSETS = [
   './',
   './index.html',
@@ -24,7 +28,7 @@ self.addEventListener('install', (e) => {
 self.addEventListener('activate', (e) => {
   e.waitUntil(
     caches.keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith(PREFIX) && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });

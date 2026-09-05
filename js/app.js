@@ -1,7 +1,7 @@
 /* AMS Breathing — app logic (vanilla JS, no build) */
 'use strict';
 
-const APP_VERSION = '1.4.0';
+const APP_VERSION = '1.4.1';
 
 /* ---------- Version history (newest first) ---------- */
 const CHANGELOG = [
