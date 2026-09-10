@@ -1,10 +1,17 @@
 /* AMS Breathing — app logic (vanilla JS, no build) */
 'use strict';
 
-const APP_VERSION = '1.4.1';
+const APP_VERSION = '1.4.2';
 
 /* ---------- Version history (newest first) ---------- */
 const CHANGELOG = [
+  {
+    version: '1.4.2',
+    date: '2026-09-10 18:50',
+    changes: [
+      'Export backup and Export spreadsheet used a plain download link, which does nothing inside an app opened from the Home Screen — so on the iPhone, tapping either could quietly do nothing at all. Both now hand the file to the normal iPhone share sheet, so you can put it in Files, Mail or anywhere else.',
+    ],
+  },
   {
     version: '1.4.0',
     date: '2026-08-26 21:30',
@@ -210,12 +217,21 @@ const ICON = {
 };
 
 /* ---------- Generic download / file helpers ---------- */
-function downloadBlob(blob, filename) {
+// A plain download link does nothing inside an app opened from the Home Screen, so
+// both the backup and the Excel export used to end in silence there. Share sheet
+// first (which is how you get a file off an iPhone at all), download as a fallback.
+async function downloadBlob(blob, filename) {
+  const file = new File([blob], filename, { type: blob.type || 'application/octet-stream' });
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: filename }); return true; }
+    catch (err) { return false; }        // cancelled or failed — nothing was saved
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url; a.download = filename;
   document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 1500);
+  return true;
 }
 function dateStamp() { return new Date().toISOString().slice(0, 10); }
 function slug(s) { return String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'user'; }
