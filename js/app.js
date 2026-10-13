@@ -1,10 +1,17 @@
 /* AMS Breathing — app logic (vanilla JS, no build) */
 'use strict';
 
-const APP_VERSION = '1.4.2';
+const APP_VERSION = '1.4.3';
 
 /* ---------- Version history (newest first) ---------- */
 const CHANGELOG = [
+  {
+    version: '1.4.3',
+    date: '2026-10-13 14:30',
+    changes: [
+      'On the iPhone, the top row sits a little lower — the logo with the Statistics and Settings buttons, the back arrow and page title on Statistics and Settings, the cycle dots and ✕ during a session, and the ✕ on a full-screen photo. They were inside the soft blur iOS draws just under the clock, so they looked fuzzy; now they are clear of it and sharp again. On the Mac nothing moves.',
+    ],
+  },
   {
     version: '1.4.2',
     date: '2026-09-10 18:50',
@@ -982,6 +989,7 @@ const HOW_HTML = `
   <p>The screen after a session is cut down the same way: one 🎉, your <strong>best hold</strong> as one huge number, that round's holds as bare numbers, and one big <strong>DONE</strong> button. Cycles done, breath count and every label live in <strong>Statistics</strong>, for when your glasses are back on.</p>
   <h3>Starting &amp; stopping</h3>
   <p>Double-tap anywhere on the home screen to begin. During an exhale hold, double-tap to end the hold. Use ✕ to quit early — an interrupted session is still saved to your statistics (marked as interrupted).</p>
+  <p>On the iPhone the top row of every screen sits a little below the clock, clear of the soft blur iOS draws there, so it stays sharp.</p>
   <h3>Definitions</h3>
   <dl>
     <dt>Cycle</dt><dd>One full round: the breaths, the exhale hold, and the recovery hold.</dd>
